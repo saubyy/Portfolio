@@ -1,0 +1,886 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Saubhagya Singh — Video Editor</title>
+<meta name="description" content="Saubhagya Singh — video editor and CS undergrad. Selected edits, skills, and contact." />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+<style>
+  :root{
+    --paper: #fcfcfa;
+    --paper-alt: #f2f2ed;
+    --ink: #15161a;
+    --ink-soft: #53565c;
+    --ink-faint: #8a8d93;
+    --line: #e1e1db;
+    --accent: #3452ff;
+    --accent-ink: #ffffff;
+    --accent-soft: #edf0ff;
+
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-body: 'Inter', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+
+    --max: 760px;
+    --spine-w: 64px;
+    --radius: 3px;
+  }
+
+  *,*::before,*::after{ box-sizing:border-box; }
+  html{ scroll-padding-top:90px; }
+  @media (prefers-reduced-motion: no-preference){
+    html{ scroll-behavior:smooth; }
+  }
+
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--font-body);
+    font-size:16px;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  a{ color:inherit; }
+  img{ max-width:100%; display:block; }
+
+  ::selection{ background:var(--accent); color:var(--accent-ink); }
+
+  :focus-visible{
+    outline:2px solid var(--accent);
+    outline-offset:3px;
+    border-radius:2px;
+  }
+
+  h1,h2,h3{
+    font-family:var(--font-display);
+    font-weight:600;
+    line-height:1.1;
+    margin:0;
+    letter-spacing:-0.01em;
+  }
+
+  .eyebrow{
+    font-family:var(--font-mono);
+    font-size:12px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--accent);
+    margin:0 0 14px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .eyebrow::before{
+    content:"";
+    width:14px;
+    height:1px;
+    background:var(--accent);
+    display:inline-block;
+  }
+
+  /* ---------- Layout shell ---------- */
+  .shell{
+    max-width:var(--max);
+    margin:0 auto;
+    padding:0 28px;
+  }
+  @media (min-width:900px){
+    .shell{ padding-left:calc(28px + var(--spine-w)); }
+  }
+
+  /* ---------- Progress spine (signature element) ---------- */
+  .spine{
+    position:fixed;
+    top:0; left:0;
+    width:var(--spine-w);
+    height:100vh;
+    display:none;
+    z-index:40;
+    pointer-events:none;
+  }
+  @media (min-width:900px){ .spine{ display:block; } }
+
+  .spine__track{
+    position:absolute;
+    left:32px; top:0;
+    width:1px; height:100%;
+    background:var(--line);
+  }
+  .spine__fill{
+    position:absolute;
+    left:32px; top:0;
+    width:1px; height:0%;
+    background:var(--accent);
+    transition:height .08s linear;
+  }
+  .spine__ticks{
+    position:relative;
+    height:100%;
+  }
+  .spine__tick{
+    position:absolute;
+    left:16px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    transform:translateY(-50%);
+  }
+  .spine__tick-dot{
+    width:5px; height:5px;
+    border-radius:50%;
+    background:var(--line);
+    flex-shrink:0;
+    transition:background .2s ease, transform .2s ease;
+  }
+  .spine__tick-label{
+    font-family:var(--font-mono);
+    font-size:10px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:var(--ink-faint);
+    writing-mode:vertical-rl;
+    transform:rotate(180deg);
+    white-space:nowrap;
+    transition:color .2s ease;
+  }
+  .spine__tick.is-active .spine__tick-dot{
+    background:var(--accent);
+    transform:scale(1.6);
+  }
+  .spine__tick.is-active .spine__tick-label{ color:var(--ink); }
+
+  /* ---------- Nav ---------- */
+  .nav{
+    position:fixed;
+    top:0; left:0; right:0;
+    z-index:50;
+    padding:20px 28px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    background:transparent;
+    border-bottom:1px solid transparent;
+    transition:background .25s ease, border-color .25s ease;
+  }
+  @media (min-width:900px){ .nav{ padding-left:calc(28px + var(--spine-w)); } }
+  .nav.is-scrolled{
+    background:rgba(252,252,250,0.88);
+    backdrop-filter:blur(8px);
+    border-bottom-color:var(--line);
+  }
+
+  .nav__mark{
+    font-family:var(--font-mono);
+    font-weight:500;
+    font-size:14px;
+    letter-spacing:.04em;
+    text-decoration:none;
+    border:1px solid var(--ink);
+    border-radius:50%;
+    width:34px; height:34px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+
+  .nav__links{
+    list-style:none;
+    display:flex;
+    gap:28px;
+    margin:0; padding:0;
+  }
+  .nav__links a{
+    font-family:var(--font-mono);
+    font-size:12px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    text-decoration:none;
+    color:var(--ink-soft);
+    padding-bottom:3px;
+    border-bottom:1px solid transparent;
+    transition:color .2s ease, border-color .2s ease;
+  }
+  .nav__links a:hover,
+  .nav__links a.is-active{
+    color:var(--ink);
+    border-color:var(--accent);
+  }
+  @media (max-width:640px){
+    .nav__links{ gap:16px; }
+    .nav__links a{ font-size:11px; }
+  }
+
+  /* ---------- Buttons ---------- */
+  .btn{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    font-family:var(--font-mono);
+    font-size:13px;
+    letter-spacing:.03em;
+    text-decoration:none;
+    padding:12px 20px;
+    border-radius:var(--radius);
+    border:1px solid var(--ink);
+    color:var(--ink);
+    background:transparent;
+    cursor:pointer;
+    transition:background .2s ease, color .2s ease, border-color .2s ease, transform .15s ease;
+  }
+  .btn:hover{ transform:translateY(-1px); }
+  .btn--primary{
+    background:var(--ink);
+    color:var(--paper);
+    border-color:var(--ink);
+  }
+  .btn--primary:hover{ background:var(--accent); border-color:var(--accent); }
+  .btn--ghost:hover{ border-color:var(--accent); color:var(--accent); }
+
+  /* ---------- Hero ---------- */
+  .hero{
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    padding-top:110px;
+    padding-bottom:60px;
+  }
+  .hero__grid{
+    display:grid;
+    gap:40px;
+    align-items:center;
+  }
+  @media (min-width:760px){
+    .hero__grid{ grid-template-columns:1fr 200px; gap:56px; }
+  }
+  .hero__portrait{
+    order:-1;
+    width:140px;
+    position:relative;
+  }
+  @media (min-width:760px){
+    .hero__portrait{ order:1; width:100%; }
+  }
+  .hero__portrait-frame{
+    position:relative;
+    width:100%;
+    aspect-ratio:1/1;
+  }
+  .hero__portrait-frame::before{
+    content:"";
+    position:absolute;
+    top:12px; left:12px;
+    width:100%; height:100%;
+    border:1px solid var(--accent);
+    border-radius:50%;
+    z-index:0;
+  }
+  .hero__portrait img{
+    position:relative;
+    z-index:1;
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    border-radius:50%;
+    border:1px solid var(--line);
+  }
+  .hero__status{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    font-family:var(--font-mono);
+    font-size:12px;
+    color:var(--ink-soft);
+    margin-bottom:22px;
+  }
+  .hero__status-dot{
+    width:7px; height:7px;
+    border-radius:50%;
+    background:#2fae5c;
+    box-shadow:0 0 0 3px rgba(47,174,92,0.15);
+  }
+  .hero h1{
+    font-size:clamp(40px, 7.5vw, 76px);
+    margin-bottom:18px;
+  }
+  .hero__role{
+    font-size:clamp(18px, 2.6vw, 22px);
+    color:var(--ink-soft);
+    max-width:520px;
+    margin-bottom:34px;
+  }
+  .hero__actions{
+    display:flex;
+    gap:14px;
+    flex-wrap:wrap;
+    margin-bottom:40px;
+  }
+  .hero__meta{
+    display:flex;
+    gap:22px;
+    flex-wrap:wrap;
+    font-family:var(--font-mono);
+    font-size:12px;
+    color:var(--ink-faint);
+  }
+  .hero__meta span{ white-space:nowrap; }
+
+  /* ---------- Sections ---------- */
+  .section{
+    padding:110px 0;
+    border-top:1px solid var(--line);
+  }
+  .section--alt{ background:var(--paper-alt); }
+  .section--alt .shell{ padding-top:0; padding-bottom:0; }
+  .section__head{ margin-bottom:52px; max-width:560px; }
+  .section__head h2{ font-size:clamp(28px,4vw,38px); margin-bottom:14px; }
+  .section__head p{ color:var(--ink-soft); margin:0; }
+
+  [data-reveal]{
+    opacity:0;
+    transform:translateY(14px);
+    transition:opacity .6s ease, transform .6s ease;
+  }
+  [data-reveal].is-visible{ opacity:1; transform:none; }
+  @media (prefers-reduced-motion: reduce){
+    [data-reveal]{ opacity:1; transform:none; transition:none; }
+  }
+
+  /* ---------- About ---------- */
+  .about__body{
+    display:grid;
+    gap:44px;
+  }
+  @media (min-width:700px){
+    .about__body{ grid-template-columns:1.3fr 1fr; }
+  }
+  .about__copy p{ margin:0 0 16px; color:var(--ink-soft); }
+  .about__copy p:last-child{ margin-bottom:0; }
+
+  .fact-list{
+    list-style:none;
+    margin:0; padding:0;
+    border-top:1px solid var(--line);
+  }
+  .fact-list li{
+    display:flex;
+    justify-content:space-between;
+    gap:16px;
+    padding:14px 0;
+    border-bottom:1px solid var(--line);
+    font-size:14px;
+  }
+  .fact-list .k{
+    font-family:var(--font-mono);
+    font-size:11px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    color:var(--ink-faint);
+  }
+  .fact-list .v{ text-align:right; color:var(--ink); }
+
+  /* ---------- Work ---------- */
+  .work-grid{
+    display:grid;
+    gap:1px;
+    background:var(--line);
+    border:1px solid var(--line);
+  }
+  @media (min-width:760px){
+    .work-grid{ grid-template-columns:1fr 1fr; }
+  }
+  .work-card{
+    background:var(--paper);
+    display:flex;
+    flex-direction:column;
+  }
+  .work-card video{
+    width:100%;
+    aspect-ratio:16/9;
+    background:#000;
+    display:block;
+  }
+  .work-card__body{
+    padding:26px 28px 30px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+  .work-card__top{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    gap:12px;
+  }
+  .work-card h3{ font-size:20px; }
+  .work-card__dur{
+    font-family:var(--font-mono);
+    font-size:12px;
+    color:var(--ink-faint);
+    flex-shrink:0;
+  }
+  .work-card p{ margin:0; color:var(--ink-soft); font-size:14px; }
+  .tag-row{ display:flex; flex-wrap:wrap; gap:8px; margin-top:auto; padding-top:6px; }
+  .tag{
+    font-family:var(--font-mono);
+    font-size:11px;
+    letter-spacing:.03em;
+    color:var(--ink-soft);
+    border:1px solid var(--line);
+    border-radius:999px;
+    padding:4px 10px;
+    background:var(--paper);
+  }
+  .work-note{
+    margin-top:20px;
+    font-family:var(--font-mono);
+    font-size:12px;
+    color:var(--ink-faint);
+  }
+
+  /* ---------- Skills ---------- */
+  .skill-group{ margin-bottom:30px; }
+  .skill-group:last-child{ margin-bottom:0; }
+  .skill-group h3{
+    font-family:var(--font-mono);
+    font-size:12px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    font-weight:500;
+    color:var(--ink-faint);
+    margin-bottom:14px;
+  }
+  .skill-tags{ display:flex; flex-wrap:wrap; gap:10px; }
+  .skill-tags .tag{ background:var(--paper-alt); }
+
+  .timeline{ margin-top:60px; border-top:1px solid var(--line); }
+  .timeline-item{
+    display:grid;
+    grid-template-columns:150px 1fr;
+    gap:20px;
+    padding:24px 0;
+    border-bottom:1px solid var(--line);
+  }
+  @media (max-width:640px){
+    .timeline-item{ grid-template-columns:1fr; gap:6px; }
+  }
+  .timeline-item time{
+    font-family:var(--font-mono);
+    font-size:12px;
+    color:var(--ink-faint);
+  }
+  .timeline-item h4{
+    font-family:var(--font-body);
+    font-weight:600;
+    font-size:16px;
+    margin:0 0 6px;
+  }
+  .timeline-item p{ margin:0; color:var(--ink-soft); font-size:14px; }
+
+  .resume-cta{
+    margin-top:44px;
+    display:flex;
+    align-items:center;
+    gap:16px;
+    flex-wrap:wrap;
+  }
+  .resume-cta span{ font-size:13px; color:var(--ink-faint); }
+
+  /* ---------- Contact ---------- */
+  .contact-grid{
+    display:grid;
+    gap:48px;
+  }
+  @media (min-width:700px){
+    .contact-grid{ grid-template-columns:1fr 1fr; }
+  }
+  .field{ margin-bottom:20px; }
+  .field label{
+    display:block;
+    font-family:var(--font-mono);
+    font-size:11px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    color:var(--ink-faint);
+    margin-bottom:8px;
+  }
+  .field input,
+  .field textarea{
+    width:100%;
+    border:1px solid var(--line);
+    background:var(--paper);
+    border-radius:var(--radius);
+    padding:12px 14px;
+    font-family:var(--font-body);
+    font-size:15px;
+    color:var(--ink);
+    resize:vertical;
+    transition:border-color .2s ease;
+  }
+  .field input:focus,
+  .field textarea:focus{
+    outline:none;
+    border-color:var(--accent);
+  }
+  .form-note{
+    font-size:12px;
+    color:var(--ink-faint);
+    margin-top:10px;
+  }
+
+  .contact-direct h3{ font-size:18px; margin-bottom:12px; }
+  .contact-direct p{ color:var(--ink-soft); margin:0 0 24px; max-width:340px; }
+  .social-list{
+    list-style:none;
+    margin:0; padding:0;
+    border-top:1px solid var(--line);
+  }
+  .social-list li{ border-bottom:1px solid var(--line); }
+  .social-list a{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:14px 2px;
+    text-decoration:none;
+    font-family:var(--font-mono);
+    font-size:13px;
+    color:var(--ink);
+  }
+  .social-list a:hover{ color:var(--accent); }
+  .social-list a span.arrow{ color:var(--ink-faint); transition:transform .2s ease; }
+  .social-list a:hover span.arrow{ transform:translate(2px,-2px); color:var(--accent); }
+
+  /* ---------- Footer ---------- */
+  footer{
+    padding:36px 0 48px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:12px;
+    font-family:var(--font-mono);
+    font-size:12px;
+    color:var(--ink-faint);
+  }
+  footer a{ text-decoration:none; color:var(--ink-faint); }
+  footer a:hover{ color:var(--accent); }
+</style>
+</head>
+<body>
+
+  <!-- Signature element: scroll-progress spine, like a document margin ruler -->
+  <nav class="spine" aria-hidden="true">
+    <div class="spine__track"></div>
+    <div class="spine__fill" id="spineFill"></div>
+    <div class="spine__ticks" id="spineTicks">
+      <div class="spine__tick" data-target="home" style="top:8%"><span class="spine__tick-dot"></span><span class="spine__tick-label">Home</span></div>
+      <div class="spine__tick" data-target="about" style="top:28%"><span class="spine__tick-dot"></span><span class="spine__tick-label">About</span></div>
+      <div class="spine__tick" data-target="work" style="top:50%"><span class="spine__tick-dot"></span><span class="spine__tick-label">Work</span></div>
+      <div class="spine__tick" data-target="skills" style="top:72%"><span class="spine__tick-dot"></span><span class="spine__tick-label">Skills</span></div>
+      <div class="spine__tick" data-target="contact" style="top:92%"><span class="spine__tick-dot"></span><span class="spine__tick-label">Contact</span></div>
+    </div>
+  </nav>
+
+  <header class="nav" id="siteNav">
+    <a href="#home" class="nav__mark">SS</a>
+    <ul class="nav__links">
+      <li><a href="#about">About</a></li>
+      <li><a href="#work">Work</a></li>
+      <li><a href="#skills">Skills</a></li>
+      <li><a href="#contact">Contact</a></li>
+    </ul>
+  </header>
+
+  <main>
+
+    <!-- ---------- Hero ---------- -->
+    <section class="hero shell" id="home">
+      <div class="hero__grid">
+        <div>
+          <div class="hero__status">
+            <span class="hero__status-dot"></span>
+            Currently editing @ Thapar Movie Club
+          </div>
+          <h1>Saubhagya Singh</h1>
+          <p class="hero__role">Video Editor &amp; Storyteller — shaping raw footage into stories worth watching.</p>
+          <div class="hero__actions">
+            <a href="#work" class="btn btn--primary">Watch the work</a>
+            <a href="#contact" class="btn btn--ghost">Get in touch</a>
+          </div>
+          <div class="hero__meta">
+            <span>Ghaziabad, India</span>
+            <span>·</span>
+            <span>B.Tech CS, Thapar Institute</span>
+            <span>·</span>
+            <span>saubhagya3983@gmail.com</span>
+          </div>
+        </div>
+        <div class="hero__portrait">
+          <div class="hero__portrait-frame">
+            <img src="C:\Users\Saubhagya Singh\Desktop\object video\Saubhagya.jpeg" alt="Portrait of Saubhagya Singh" />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- About ---------- -->
+    <section class="section" id="about">
+      <div class="shell">
+        <div class="section__head" data-reveal>
+          <p class="eyebrow">About</p>
+          <h2>A little about how I work</h2>
+        </div>
+        <div class="about__body" data-reveal>
+          <div class="about__copy">
+            <p>I'm a video editor with a growing specialty in storytelling, color grading, and motion graphics — currently editing short films, trailers, and documentary-style content for the Thapar Movie Club. I care about pacing and rhythm as much as visuals: taking raw footage and shaping it into something that actually holds attention.</p>
+            <p>Alongside editing, I'm a Computer Science undergrad at Thapar Institute of Engineering and Technology, where I'm also active in OWASP — I led a team at the HACKOWASP hackathon building "MediGrid," a healthcare management web app. The two sides feed each other: editing sharpens my eye for pacing and detail, and the technical side keeps me comfortable building and shipping things end to end.</p>
+          </div>
+          <ul class="fact-list">
+            <li><span class="k">Focus</span><span class="v">Video Editing, Motion Graphics</span></li>
+            <li><span class="k">Studying</span><span class="v">B.Tech CS · Thapar Institute (2029)</span></li>
+            <li><span class="k">Based in</span><span class="v">Ghaziabad, India</span></li>
+            <li><span class="k">Currently</span><span class="v">Video Editor, Thapar Movie Club</span></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- Work ---------- -->
+    <section class="section section--alt" id="work">
+      <div class="shell">
+        <div class="section__head" data-reveal>
+          <p class="eyebrow">Selected Work</p>
+          <h2>A couple of recent edits</h2>
+          <p>Two short pieces edited start to finish — footage, color, sound, and cut. Play them right here.</p>
+        </div>
+        <div class="work-grid" data-reveal>
+          <div class="work-card">
+            <video controls preload="none" poster="assets/abaad-poster.jpg">
+              <source src="Videos\abaad1.mp4" type="video/mp4" />
+            </video>
+            <div class="work-card__body">
+              <div class="work-card__top">
+                <h3>Abaad</h3>
+                <span class="work-card__dur">0:42</span>
+              </div>
+              <p>A short narrative edit — cut for pacing and color to bring the raw footage together into one finished piece.</p>
+              <div class="tag-row">
+                <span class="tag">Short Film</span>
+                <span class="tag">Color Grading</span>
+                <span class="tag">DaVinci Resolve</span>
+              </div>
+            </div>
+          </div>
+          <div class="work-card">
+            <video controls preload="none" poster="Videos\Survivor-poster.jpg">
+              <source src="Videos\Survivor.mp4" type="video/mp4" />
+            </video>
+            <div class="work-card__body">
+              <div class="work-card__top">
+                <h3>Survivor</h3>
+                <span class="work-card__dur">0:25</span>
+              </div>
+              <p>A short-form edit built around rhythm and cut timing, formatted for social platforms.</p>
+              <div class="tag-row">
+                <span class="tag">Short-form</span>
+                <span class="tag">Motion Graphics</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="work-note">Titles and descriptions here are placeholders — tell me the real project names and I'll swap them in.</p>
+      </div>
+    </section>
+
+    <!-- ---------- Skills ---------- -->
+    <section class="section" id="skills">
+      <div class="shell">
+        <div class="section__head" data-reveal>
+          <p class="eyebrow">Skills &amp; Experience</p>
+          <h2>What I work with</h2>
+        </div>
+
+        <div data-reveal>
+          <div class="skill-group">
+            <h3>Editing &amp; Post-Production</h3>
+            <div class="skill-tags">
+              <span class="tag">Video Editing</span>
+              <span class="tag">DaVinci Resolve</span>
+              <span class="tag">Color Grading</span>
+              <span class="tag">Motion Graphics</span>
+            </div>
+          </div>
+          <div class="skill-group">
+            <h3>Story &amp; Content</h3>
+            <div class="skill-tags">
+              <span class="tag">Storytelling</span>
+              <span class="tag">Scriptwriting</span>
+              <span class="tag">Social Media Content</span>
+              <span class="tag">Creative Collaboration</span>
+            </div>
+          </div>
+          <div class="skill-group">
+            <h3>Also Building</h3>
+            <div class="skill-tags">
+              <span class="tag">Web Development</span>
+              <span class="tag">Project Planning</span>
+              <span class="tag">Problem-Solving</span>
+              <span class="tag">Microsoft Word</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="timeline" data-reveal>
+          <div class="timeline-item">
+            <time>Sep 2025 — Current</time>
+            <div>
+              <h4>Video Editor — Thapar Movie Club</h4>
+              <p>Edit short films, trailers, and documentary-style videos in DaVinci Resolve — color grading, sound design, and end-to-end post-production for YouTube, social, and campus screenings.</p>
+            </div>
+          </div>
+          <div class="timeline-item">
+            <time>2025 — May 2029 (Expected)</time>
+            <div>
+              <h4>B.Tech Computer Science — Thapar Institute of Engineering and Technology</h4>
+              <p>CGPA 8.6 in first semester. Active in OWASP; led a team at the HACKOWASP hackathon building "MediGrid," a healthcare management web app.</p>
+            </div>
+          </div>
+          <div class="timeline-item">
+            <time>2024</time>
+            <div>
+              <h4>Higher Secondary Education — Vishwa Bharati Public School, Noida</h4>
+              <p>87.5% in Class XII · 96.66 percentile in JEE Mains 2025 · Qualified JEE Advanced.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="resume-cta" data-reveal>
+          <a href="assets/resume.pdf" class="btn btn--primary" download>Download résumé (PDF)</a>
+          <span>Full experience &amp; education details</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- Contact ---------- -->
+    <section class="section section--alt" id="contact">
+      <div class="shell">
+        <div class="section__head" data-reveal>
+          <p class="eyebrow">Contact</p>
+          <h2>Let's talk</h2>
+          <p>Have an edit in mind, or just want to say hi? My inbox is open.</p>
+        </div>
+
+        <div class="contact-grid" data-reveal>
+          <form id="contactForm" novalidate>
+            <div class="field">
+              <label for="name">Name</label>
+              <input type="text" id="name" name="name" required />
+            </div>
+            <div class="field">
+              <label for="email">Email</label>
+              <input type="email" id="email" name="email" required />
+            </div>
+            <div class="field">
+              <label for="message">Message</label>
+              <textarea id="message" name="message" rows="5" required></textarea>
+            </div>
+            <button type="submit" class="btn btn--primary">Send message</button>
+            <p class="form-note">This form opens your email client with the message pre-filled. To collect messages directly on the page instead, connect it to a service like Formspree and swap the submit handler below.</p>
+          </form>
+
+          <div class="contact-direct">
+            <h3>Prefer email?</h3>
+            <p>Reach out directly and I'll get back to you within a day or two.</p>
+            <ul class="social-list">
+              <li><a href="mailto:saubhagya3983@gmail.com">Email <span class="arrow">↗</span></a></li>
+              <li><a href="https://www.linkedin.com/in/saubhagya-singh-929413367/" target="_blank" rel="noopener">LinkedIn <span class="arrow">↗</span></a></li>
+              <li><a href="https://github.com/saubyy" target="_blank" rel="noopener">GitHub <span class="arrow">↗</span></a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="shell">
+    <span>© 2026 Saubhagya Singh. Built with care.</span>
+    <a href="#home">Back to top ↑</a>
+  </footer>
+
+<script>
+  // Nav background on scroll
+  const nav = document.getElementById('siteNav');
+  const onScroll = () => {
+    nav.classList.toggle('is-scrolled', window.scrollY > 40);
+    updateSpine();
+  };
+
+  // Scroll-progress spine fill
+  const spineFill = document.getElementById('spineFill');
+  const spineTicks = Array.from(document.querySelectorAll('.spine__tick'));
+  function updateSpine(){
+    const doc = document.documentElement;
+    const scrolled = doc.scrollTop;
+    const height = doc.scrollHeight - doc.clientHeight;
+    const pct = height > 0 ? (scrolled / height) * 100 : 0;
+    if (spineFill) spineFill.style.height = pct + '%';
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+
+  // Active section highlighting (nav links + spine ticks)
+  const sections = document.querySelectorAll('main section[id]');
+  const navLinks = document.querySelectorAll('.nav__links a');
+
+  const sectionObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting){
+        const id = entry.target.id;
+        navLinks.forEach(a => a.classList.toggle('is-active', a.getAttribute('href') === '#' + id));
+        spineTicks.forEach(t => t.classList.toggle('is-active', t.dataset.target === id));
+      }
+    });
+  }, { rootMargin: '-45% 0px -45% 0px' });
+
+  sections.forEach(s => sectionObserver.observe(s));
+
+  // Reveal-on-scroll
+  const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const revealEls = document.querySelectorAll('[data-reveal]');
+  if (prefersReduced){
+    revealEls.forEach(el => el.classList.add('is-visible'));
+  } else {
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting){
+          entry.target.classList.add('is-visible');
+          revealObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.12 });
+    revealEls.forEach(el => revealObserver.observe(el));
+  }
+
+  // Contact form -> mailto fallback (no backend required)
+  const form = document.getElementById('contactForm');
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = document.getElementById('name').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const message = document.getElementById('message').value.trim();
+    const subject = encodeURIComponent('Portfolio contact from ' + name);
+    const body = encodeURIComponent(message + '\n\n— ' + name + ' (' + email + ')');
+    window.location.href = `mailto:saubhagya3983@gmail.com?subject=${subject}&body=${body}`;
+  });
+</script>
+
+</body>
+</html>
